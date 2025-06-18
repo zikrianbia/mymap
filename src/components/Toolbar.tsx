@@ -3,44 +3,26 @@ import {
   Menu, 
   Download, 
   Upload, 
-  Moon, 
-  Sun, 
   Undo, 
   Redo, 
-  Search,
   Settings,
   FileText,
   Image,
-  Share
+  Share,
+  Grid
 } from 'lucide-react';
 import { useMindMapStore } from '../stores/mindmapStore';
 
 const Toolbar: React.FC = () => {
   const {
-    isDarkMode,
     showToolbar,
-    toggleDarkMode,
     toggleToolbar,
     undo,
     redo,
     history,
     exportAsJson,
-    searchNodes,
+    rebalanceLayout,
   } = useMindMapStore();
-
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim()) {
-      const results = searchNodes(query);
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
-  };
 
   const handleExportJson = () => {
     const data = exportAsJson();
@@ -63,16 +45,27 @@ const Toolbar: React.FC = () => {
     }
   };
 
+  // Center the root node in the viewport
+  const handleRebalanceAndCenter = () => {
+    rebalanceLayout();
+    setTimeout(() => {
+      const { nodes, rootNodeId, setCanvasPosition } = useMindMapStore.getState();
+      const root = nodes[rootNodeId];
+      if (root) {
+        const nodeWidth =  root.title ? Math.max(80, 0.6 * 14 * root.title.length + 32) : 80;
+        const centerX = window.innerWidth / 2 - (root.position.x + nodeWidth / 2) - 100;
+        const centerY = window.innerHeight / 2 - (root.position.y + 32 / 2) - 50;
+        setCanvasPosition({ x: centerX, y: centerY });
+      }
+    }, 0);
+  };
+
   return (
     <>
       {/* Toolbar toggle button */}
       <button
         onClick={toggleToolbar}
-        className={`fixed top-4 left-4 z-40 p-2 rounded-md shadow-lg transition-all ${
-          isDarkMode 
-            ? 'bg-gray-800 text-white hover:bg-gray-700' 
-            : 'bg-white text-gray-900 hover:bg-gray-50'
-        }`}
+        className={`fixed top-4 left-4 z-40 p-2 rounded-md shadow-lg transition-all bg-white text-gray-900 hover:bg-gray-50`}
       >
         <Menu size={20} />
       </button>
@@ -81,9 +74,7 @@ const Toolbar: React.FC = () => {
       <div className={`fixed top-4 left-16 z-30 transition-all duration-300 ${
         showToolbar ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
       }`}>
-        <div className={`flex items-center space-x-2 p-3 rounded-lg shadow-lg ${
-          isDarkMode ? 'bg-gray-800' : 'bg-white'
-        }`}>
+        <div className={`flex items-center space-x-2 p-3 rounded-lg shadow-lg bg-white`}>
           {/* Undo/Redo */}
           <div className="flex space-x-1">
             <button
@@ -92,9 +83,7 @@ const Toolbar: React.FC = () => {
               className={`p-2 rounded-md transition-colors ${
                 history.past.length === 0
                   ? 'opacity-50 cursor-not-allowed'
-                  : isDarkMode 
-                    ? 'text-gray-300 hover:bg-gray-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
               title="Undo (Ctrl+Z)"
             >
@@ -106,9 +95,7 @@ const Toolbar: React.FC = () => {
               className={`p-2 rounded-md transition-colors ${
                 history.future.length === 0
                   ? 'opacity-50 cursor-not-allowed'
-                  : isDarkMode 
-                    ? 'text-gray-300 hover:bg-gray-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
               title="Redo (Ctrl+Y)"
             >
@@ -116,27 +103,23 @@ const Toolbar: React.FC = () => {
             </button>
           </div>
 
-          <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
+          <div className="w-px h-6 bg-gray-300" />
 
-          {/* Search */}
+          {/* Rebalance Layout */}
           <button
-            onClick={() => setShowSearch(!showSearch)}
-            className={`p-2 rounded-md transition-colors ${
-              isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
-            }`}
-            title="Search (Ctrl+F)"
+            onClick={handleRebalanceAndCenter}
+            className={`p-2 rounded-md transition-colors text-gray-700 hover:bg-gray-100`}
+            title="Rebalance Layout (Ctrl+R)"
           >
-            <Search size={18} />
+            <Grid size={18} />
           </button>
 
-          <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
+          <div className="w-px h-6 bg-gray-300" />
 
           {/* Export options */}
           <button
             onClick={handleExportJson}
-            className={`p-2 rounded-md transition-colors ${
-              isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`p-2 rounded-md transition-colors text-gray-700 hover:bg-gray-100`}
             title="Export as JSON"
           >
             <FileText size={18} />
@@ -144,85 +127,13 @@ const Toolbar: React.FC = () => {
           
           <button
             onClick={handleExportPng}
-            className={`p-2 rounded-md transition-colors ${
-              isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            className={`p-2 rounded-md transition-colors text-gray-700 hover:bg-gray-100`}
             title="Export as PNG"
           >
             <Image size={18} />
           </button>
-
-          <div className={`w-px h-6 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`} />
-
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className={`p-2 rounded-md transition-colors ${
-              isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'
-            }`}
-            title="Toggle dark mode"
-          >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
         </div>
       </div>
-
-      {/* Search overlay */}
-      {showSearch && (
-        <div className="fixed top-20 left-4 right-4 z-40 max-w-md">
-          <div className={`p-4 rounded-lg shadow-lg ${
-            isDarkMode ? 'bg-gray-800' : 'bg-white'
-          }`}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search nodes..."
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}
-              autoFocus
-            />
-            
-            {searchResults.length > 0 && (
-              <div className="mt-2 max-h-48 overflow-y-auto">
-                {searchResults.map((node) => (
-                  <div
-                    key={node.id}
-                    className={`p-2 rounded-md cursor-pointer transition-colors ${
-                      isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
-                    }`}
-                    onClick={() => {
-                      // TODO: Focus on node
-                      setShowSearch(false);
-                    }}
-                  >
-                    <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {node.title}
-                    </div>
-                    {node.details && (
-                      <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {node.details.substring(0, 100)}...
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            <button
-              onClick={() => setShowSearch(false)}
-              className={`mt-2 text-sm ${
-                isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Press Escape to close
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 };

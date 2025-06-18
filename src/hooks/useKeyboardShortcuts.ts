@@ -17,6 +17,7 @@ export const useKeyboardShortcuts = (
     stopEditing,
     nodes,
     navigateToNode,
+    rebalanceLayout,
   } = useMindMapStore();
 
   useEffect(() => {
@@ -118,6 +119,14 @@ export const useKeyboardShortcuts = (
           }
           break;
 
+        case 'r':
+        case 'R':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            rebalanceLayout();
+          }
+          break;
+
         case 'f':
         case 'F':
           if (e.ctrlKey || e.metaKey) {
@@ -154,5 +163,6 @@ export const useKeyboardShortcuts = (
     onEditNode,
     onShowContextMenu,
     navigateToNode,
+    rebalanceLayout,
   ]);
 };

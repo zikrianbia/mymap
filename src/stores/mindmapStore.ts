@@ -2,6 +2,108 @@ import { create } from 'zustand';
 import { nanoid } from 'nanoid';
 import { MindMapState, MindMapNode, Position, DEFAULT_COLORS } from '../types/mindmap';
 
+// Layout constants
+const VERTICAL_SPACING = 10; // Reduced from 40px to 20px for even tighter layout
+const MIN_HORIZONTAL_SPACING = 50; // Reduced from 200px to 100px for tighter horizontal spacing
+const NODE_HEIGHT = 32;
+const NODE_PADDING = 8; // Minimum padding to prevent text overlap
+
+// Calculate node width based on content
+const getNodeWidth = (node: MindMapNode): number => {
+  const fontSize = 14;
+  const baseWidth = Math.max(80, 0.6 * fontSize * node.title.length + 32);
+  return Math.min(320, baseWidth);
+};
+
+// Calculate dynamic horizontal spacing based on parent and child node widths
+const calculateHorizontalSpacing = (parentNode: MindMapNode, childNode: MindMapNode): number => {
+  const parentWidth = getNodeWidth(parentNode);
+  const childWidth = getNodeWidth(childNode);
+  // Base spacing plus some extra space for longer content, but scaled down
+  const contentAdjustment = Math.max(0, (parentWidth + childWidth - 200) * 0.05); // halved from 0.1
+  return MIN_HORIZONTAL_SPACING + contentAdjustment;
+};
+
+// Center-balanced vertical tree layout algorithm
+const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: string): Record<string, MindMapNode> => {
+  const updatedNodes = { ...nodes };
+  
+  // First pass: calculate the total height needed for each subtree
+  const calculateSubtreeHeight = (nodeId: string): number => {
+    const node = updatedNodes[nodeId];
+    if (!node) return 0;
+    
+    const children = node.childrenIds
+      .map(childId => updatedNodes[childId])
+      .filter(child => child && !child.isCollapsed);
+    
+    if (children.length === 0) {
+      return NODE_HEIGHT;
+    }
+    
+    const totalChildHeight = children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
+    const totalSpacing = (children.length - 1) * VERTICAL_SPACING;
+    return Math.max(totalChildHeight + totalSpacing, NODE_HEIGHT);
+  };
+  
+  // Second pass: position nodes using the calculated heights
+  const layoutNode = (nodeId: string, parentX: number, parentY: number, level: number): void => {
+    const node = updatedNodes[nodeId];
+    if (!node) return;
+    
+    const children = node.childrenIds
+      .map(childId => updatedNodes[childId])
+      .filter(child => child && !child.isCollapsed);
+    
+    // Position the current node
+    updatedNodes[nodeId] = {
+      ...node,
+      position: { x: parentX, y: parentY },
+      level
+    };
+    
+    if (children.length === 0) {
+      return;
+    }
+    
+    // Calculate total height needed for all children
+    const totalChildHeight = children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
+    const totalSpacing = (children.length - 1) * VERTICAL_SPACING;
+    const totalHeight = totalChildHeight + totalSpacing;
+    
+    // Position children in a balanced vertical layout around parent
+    let currentY = parentY - totalHeight / 2;
+    
+    children.forEach((child) => {
+      const childHeight = calculateSubtreeHeight(child.id);
+      const childY = currentY + childHeight / 2;
+      
+      // Calculate dynamic horizontal spacing based on node content
+      const horizontalSpacing = calculateHorizontalSpacing(node, child);
+      // Position child at the right edge of the parent node plus spacing
+      const childX = parentX + getNodeWidth(node) + horizontalSpacing;
+      
+      // Position this child and all its descendants
+      layoutNode(child.id, childX, childY, level + 1);
+      
+      currentY += childHeight + VERTICAL_SPACING;
+    });
+  };
+  
+  // Start layout from root
+  const rootNode = updatedNodes[rootId];
+  if (rootNode) {
+    layoutNode(rootId, rootNode.position.x, rootNode.position.y, 0);
+  }
+  
+  return updatedNodes;
+};
+
+// Rebalance the entire tree layout
+const rebalanceTree = (nodes: Record<string, MindMapNode>, rootId: string): Record<string, MindMapNode> => {
+  return calculateBalancedLayout(nodes, rootId);
+};
+
 interface MindMapActions {
   // Node operations
   createNode: (parentId: string | null, isSibling?: boolean) => string;
@@ -10,13 +112,16 @@ interface MindMapActions {
   moveNode: (nodeId: string, newPosition: Position) => void;
   reassignParent: (nodeId: string, newParentId: string) => void;
   
+  // Layout operations
+  rebalanceLayout: () => void;
+  
   // Selection and editing
   selectNode: (nodeId: string | null) => void;
   startEditing: (nodeId: string) => void;
   stopEditing: () => void;
   
   // Navigation
-  navigateToNode: (currentNodeId: string, direction: string) => void;
+  navigateToNode: (currentNodeId: string, direction: 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight') => void;
   
   // Node states
   toggleNodeCollapse: (nodeId: string) => void;
@@ -134,8 +239,11 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         };
       }
 
+      // Apply balanced layout to the entire tree
+      const balancedNodes = rebalanceTree(updatedNodes, state.rootNodeId);
+
       return {
-        nodes: updatedNodes,
+        nodes: balancedNodes,
         selectedNodeId: newId,
         editingNodeId: newId,
       };
@@ -184,8 +292,11 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
       
       deleteRecursively(nodeId);
       
+      // Apply balanced layout to the remaining tree
+      const balancedNodes = rebalanceTree(updatedNodes, prevState.rootNodeId);
+      
       return {
-        nodes: updatedNodes,
+        nodes: balancedNodes,
         selectedNodeId: node.parentId || prevState.rootNodeId,
         editingNodeId: null,
       };
@@ -261,7 +372,10 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
       
       updateDescendantLevels(nodeId);
       
-      return { nodes: updatedNodes };
+      // Apply balanced layout to the entire tree
+      const balancedNodes = rebalanceTree(updatedNodes, prevState.rootNodeId);
+      
+      return { nodes: balancedNodes };
     });
 
     get().saveToHistory();
@@ -325,6 +439,18 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
       }
     }));
     get().saveMindMap();
+  },
+
+  rebalanceLayout: () => {
+    const state = get();
+    console.log('Rebalancing layout...', Object.keys(state.nodes).length, 'nodes');
+    
+    // Small delay to make the rebalancing more visible
+    setTimeout(() => {
+      const balancedNodes = rebalanceTree(state.nodes, state.rootNodeId);
+      set({ nodes: balancedNodes });
+      get().saveToHistory();
+    }, 50);
   },
 
   setCanvasPosition: (position) => {
@@ -472,7 +598,7 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     );
   },
 
-  navigateToNode: (currentNodeId, direction) => {
+  navigateToNode: (currentNodeId, direction: 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight') => {
     const state = get();
     const currentNode = state.nodes[currentNodeId];
     if (!currentNode) return;
@@ -481,78 +607,93 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     const getVisibleNodes = () => {
       const visible: MindMapNode[] = [];
       const visited = new Set<string>();
-      
       const traverse = (nodeId: string) => {
         if (visited.has(nodeId) || !state.nodes[nodeId]) return;
-        
         visited.add(nodeId);
         const node = state.nodes[nodeId];
         visible.push(node);
-        
         if (!node.isCollapsed) {
           node.childrenIds.forEach(traverse);
         }
       };
-      
       traverse(state.rootNodeId);
       return visible;
     };
 
     const visibleNodes = getVisibleNodes();
-    const currentIndex = visibleNodes.findIndex(node => node.id === currentNodeId);
-    
-    if (currentIndex === -1) return;
+    const current = currentNode;
+    const currentCenter = {
+      x: current.position.x + getNodeWidth(current) / 2,
+      y: current.position.y + NODE_HEIGHT / 2,
+    };
 
-    let targetNode: MindMapNode | null = null;
-
-    switch (direction) {
-      case 'ArrowUp':
-        // Find the node above (same level or higher, closest vertically)
-        for (let i = currentIndex - 1; i >= 0; i--) {
-          const candidate = visibleNodes[i];
-          if (candidate.position.y < currentNode.position.y) {
-            targetNode = candidate;
-            break;
+    if (direction === 'ArrowUp' || direction === 'ArrowDown') {
+      // Prefer nearest visible sibling (same parent, closest Y)
+      let siblings: MindMapNode[] = [];
+      if (current.parentId) {
+        const parent = state.nodes[current.parentId];
+        if (parent) {
+          siblings = parent.childrenIds
+            .map(id => state.nodes[id])
+            .filter(n => n && n.id !== currentNodeId && visibleNodes.some(vn => vn.id === n.id));
+        }
+      }
+      // Find nearest sibling vertically
+      let bestSibling: MindMapNode | null = null;
+      let bestSiblingDist = Infinity;
+      for (const sib of siblings) {
+        const sibCenterY = sib.position.y + NODE_HEIGHT / 2;
+        const dy = sibCenterY - currentCenter.y;
+        if ((direction === 'ArrowUp' && dy < 0) || (direction === 'ArrowDown' && dy > 0)) {
+          const dist = Math.abs(dy);
+          if (dist < bestSiblingDist) {
+            bestSiblingDist = dist;
+            bestSibling = sib;
           }
         }
-        break;
-
-      case 'ArrowDown':
-        // Find the node below (same level or higher, closest vertically)
-        for (let i = currentIndex + 1; i < visibleNodes.length; i++) {
-          const candidate = visibleNodes[i];
-          if (candidate.position.y > currentNode.position.y) {
-            targetNode = candidate;
-            break;
+      }
+      if (bestSibling) {
+        get().selectNode(bestSibling.id);
+        return;
+      }
+      // If no sibling, fall back to visually closest node above/below
+      let bestNode = null;
+      let bestDist = Infinity;
+      for (const node of visibleNodes) {
+        if (node.id === currentNodeId) continue;
+        const nodeCenterY = node.position.y + NODE_HEIGHT / 2;
+        const dy = nodeCenterY - currentCenter.y;
+        if ((direction === 'ArrowUp' && dy < 0) || (direction === 'ArrowDown' && dy > 0)) {
+          const dist = Math.abs(dy);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestNode = node;
           }
         }
-        break;
-
-      case 'ArrowLeft':
-        // Find the node to the left (same level or higher, closest horizontally)
-        for (let i = currentIndex - 1; i >= 0; i--) {
-          const candidate = visibleNodes[i];
-          if (candidate.position.x < currentNode.position.x) {
-            targetNode = candidate;
-            break;
-          }
-        }
-        break;
-
-      case 'ArrowRight':
-        // Find the node to the right (same level or higher, closest horizontally)
-        for (let i = currentIndex + 1; i < visibleNodes.length; i++) {
-          const candidate = visibleNodes[i];
-          if (candidate.position.x > currentNode.position.x) {
-            targetNode = candidate;
-            break;
-          }
-        }
-        break;
+      }
+      if (bestNode) {
+        get().selectNode(bestNode.id);
+      }
+      return;
     }
 
-    if (targetNode) {
-      get().selectNode(targetNode.id);
+    if (direction === 'ArrowRight') {
+      // Go to first visible child (if any)
+      const visibleChild = current.childrenIds
+        .map(id => state.nodes[id])
+        .find(n => n && visibleNodes.some(vn => vn.id === n.id));
+      if (visibleChild) {
+        get().selectNode(visibleChild.id);
+      }
+      return;
+    }
+
+    if (direction === 'ArrowLeft') {
+      // Go to parent node (if any)
+      if (current.parentId && state.nodes[current.parentId]) {
+        get().selectNode(current.parentId);
+      }
+      return;
     }
   },
 }));
