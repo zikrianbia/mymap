@@ -22,6 +22,7 @@ const Toolbar: React.FC = () => {
     history,
     exportAsJson,
     rebalanceLayout,
+    canvasScale
   } = useMindMapStore();
 
   const handleExportJson = () => {
@@ -113,6 +114,13 @@ const Toolbar: React.FC = () => {
           >
             <Grid size={18} />
           </button>
+
+          <div className="w-px h-6 bg-gray-300" />
+
+          {/* Zoom Level Display */}
+          <span className="px-2 text-sm font-medium text-gray-700 select-none" title="Zoom Level">
+            {Math.round((canvasScale / 1.2) * 100)}%
+          </span>
 
           <div className="w-px h-6 bg-gray-300" />
 

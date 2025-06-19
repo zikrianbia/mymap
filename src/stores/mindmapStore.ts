@@ -3,25 +3,24 @@ import { nanoid } from 'nanoid';
 import { MindMapState, MindMapNode, Position, DEFAULT_COLORS } from '../types/mindmap';
 
 // Layout constants
-const VERTICAL_SPACING = 10; // Reduced from 40px to 20px for even tighter layout
-const MIN_HORIZONTAL_SPACING = 50; // Reduced from 200px to 100px for tighter horizontal spacing
+const VERTICAL_SPACING = 14; // Increased for more vertical space between nodes
+const MIN_HORIZONTAL_SPACING = 50; // Reduced for shorter horizontal connection lines
 const NODE_HEIGHT = 32;
-const NODE_PADDING = 8; // Minimum padding to prevent text overlap
+const NODE_PADDING = 6; // Minimum padding to prevent text overlap
 
 // Calculate node width based on content
 const getNodeWidth = (node: MindMapNode): number => {
   const fontSize = 14;
-  const baseWidth = Math.max(80, 0.6 * fontSize * node.title.length + 32);
-  return Math.min(320, baseWidth);
+  // Estimate text width: fontSize * 0.6 * length (approximation)
+  const textWidth = 0.6 * fontSize * node.title.length;
+  const padding = 8; // 4px left, 4px right
+  const baseWidth = textWidth + padding;
+  return Math.max(32, Math.min(320, baseWidth));
 };
 
 // Calculate dynamic horizontal spacing based on parent and child node widths
 const calculateHorizontalSpacing = (parentNode: MindMapNode, childNode: MindMapNode): number => {
-  const parentWidth = getNodeWidth(parentNode);
-  const childWidth = getNodeWidth(childNode);
-  // Base spacing plus some extra space for longer content, but scaled down
-  const contentAdjustment = Math.max(0, (parentWidth + childWidth - 200) * 0.05); // halved from 0.1
-  return MIN_HORIZONTAL_SPACING + contentAdjustment;
+  return MIN_HORIZONTAL_SPACING;
 };
 
 // Center-balanced vertical tree layout algorithm
@@ -32,15 +31,12 @@ const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: str
   const calculateSubtreeHeight = (nodeId: string): number => {
     const node = updatedNodes[nodeId];
     if (!node) return 0;
-    
     const children = node.childrenIds
       .map(childId => updatedNodes[childId])
       .filter(child => child && !child.isCollapsed);
-    
     if (children.length === 0) {
       return NODE_HEIGHT;
     }
-    
     const totalChildHeight = children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
     const totalSpacing = (children.length - 1) * VERTICAL_SPACING;
     return Math.max(totalChildHeight + totalSpacing, NODE_HEIGHT);
@@ -50,42 +46,28 @@ const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: str
   const layoutNode = (nodeId: string, parentX: number, parentY: number, level: number): void => {
     const node = updatedNodes[nodeId];
     if (!node) return;
-    
     const children = node.childrenIds
       .map(childId => updatedNodes[childId])
       .filter(child => child && !child.isCollapsed);
-    
-    // Position the current node
     updatedNodes[nodeId] = {
       ...node,
       position: { x: parentX, y: parentY },
       level
     };
-    
     if (children.length === 0) {
       return;
     }
-    
     // Calculate total height needed for all children
     const totalChildHeight = children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
     const totalSpacing = (children.length - 1) * VERTICAL_SPACING;
     const totalHeight = totalChildHeight + totalSpacing;
-    
-    // Position children in a balanced vertical layout around parent
     let currentY = parentY - totalHeight / 2;
-    
     children.forEach((child) => {
       const childHeight = calculateSubtreeHeight(child.id);
       const childY = currentY + childHeight / 2;
-      
-      // Calculate dynamic horizontal spacing based on node content
       const horizontalSpacing = calculateHorizontalSpacing(node, child);
-      // Position child at the right edge of the parent node plus spacing
       const childX = parentX + getNodeWidth(node) + horizontalSpacing;
-      
-      // Position this child and all its descendants
       layoutNode(child.id, childX, childY, level + 1);
-      
       currentY += childHeight + VERTICAL_SPACING;
     });
   };
@@ -174,7 +156,7 @@ const createInitialState = (): MindMapState => {
     editingNodeId: null,
     isDarkMode: false,
     canvasPosition: { x: 0, y: 0 },
-    canvasScale: 1,
+    canvasScale: 1.2,
     showToolbar: true,
     history: {
       past: [],
@@ -463,8 +445,20 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
 
   zoomCanvas: (delta, center) => {
     const state = get();
-    const newScale = Math.max(0.1, Math.min(3, state.canvasScale + delta));
-    set({ canvasScale: newScale });
+    const oldScale = state.canvasScale;
+    const newScale = Math.max(0.1, Math.min(3, oldScale + delta));
+    if (newScale === oldScale) return;
+    // Calculate new position so that the zoom center stays fixed
+    const canvasPos = state.canvasPosition;
+    const mousePointTo = {
+      x: (center.x - canvasPos.x) / oldScale,
+      y: (center.y - canvasPos.y) / oldScale,
+    };
+    const newPos = {
+      x: center.x - mousePointTo.x * newScale,
+      y: center.y - mousePointTo.y * newScale,
+    };
+    set({ canvasScale: newScale, canvasPosition: newPos });
   },
 
   toggleDarkMode: () => {

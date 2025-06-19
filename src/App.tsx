@@ -112,14 +112,18 @@ function App() {
     const handleZoomKeys = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
         e.preventDefault();
-        useMindMapStore.getState().setCanvasScale(
-          useMindMapStore.getState().canvasScale * 1.1
-        );
+        const center = {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        };
+        useMindMapStore.getState().zoomCanvas(0.1, center);
       } else if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
         e.preventDefault();
-        useMindMapStore.getState().setCanvasScale(
-          useMindMapStore.getState().canvasScale / 1.1
-        );
+        const center = {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        };
+        useMindMapStore.getState().zoomCanvas(-0.1, center);
       }
     };
     window.addEventListener('keydown', handleZoomKeys, { capture: true });

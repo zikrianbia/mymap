@@ -87,8 +87,8 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
             background: 'transparent',
             color: 'white',
             fontSize: '14px',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontWeight: 'bold',
+            fontFamily: 'Montserrat, Inter, system-ui, sans-serif',
+            fontWeight: 500,
             textAlign: 'center',
             lineHeight: '24px',
           }}

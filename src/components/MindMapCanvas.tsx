@@ -14,10 +14,23 @@ interface MindMapCanvasProps {
 const NODE_HEIGHT = 32;
 const NODE_RADIUS = 6;
 
-function getNodeWidth(node: MindMapNode) {
-  const fontSize = 14;
-  const baseWidth = Math.max(80, 0.6 * fontSize * node.title.length + 32);
-  return Math.min(320, baseWidth);
+function getNodeWidth(node: MindMapNode): number {
+  const fontSize = 12;
+  const fontWeight = 900;
+  const fontFamily = 'Montserrat, Inter, system-ui, sans-serif';
+  const padding = 24; // 12px left, 12px right
+  const maxWidth = 320;
+  const minWidth = 32;
+  // Create a canvas context for accurate text measurement
+  const canvas: HTMLCanvasElement = (getNodeWidth as any)._canvas || ((getNodeWidth as any)._canvas = document.createElement('canvas'));
+  const context = canvas.getContext('2d');
+  if (!context) return minWidth;
+  context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  const metrics = context.measureText(node.title);
+  const textWidth = metrics.width;
+  // If text + padding exceeds max, return maxWidth (padding is always preserved)
+  if (textWidth + padding > maxWidth) return maxWidth;
+  return Math.max(minWidth, textWidth + padding);
 }
 
 const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextMenu }) => {
@@ -43,21 +56,21 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
     stopEditing,
   } = useMindMapStore();
 
+  // Add these refs at the top of the component
+  const initialTouchCenter = useRef<{ x: number; y: number } | null>(null);
+  const initialCanvasPosition = useRef<{ x: number; y: number } | null>(null);
+  const initialDist = useRef<number | null>(null);
+  const initialScale = useRef<number | null>(null);
+
   // Generate curved Bezier path between two points
   const generateBezierPath = useCallback((from: { x: number; y: number }, to: { x: number; y: number }) => {
-    // Calculate control points for tighter, more natural curves
+    const minCurve = 20;
+    const maxCurve = 80;
     const dx = Math.abs(to.x - from.x);
-    const dy = Math.abs(to.y - from.y);
-    
-    // For tighter curves, use smaller control point distances
-    // This creates curves that hug closer to the nodes
-    const curveFactor = 0.15; // Reduced from 0.3 for tighter curves
-    const controlPoint1X = from.x + dx * curveFactor;
-    const controlPoint1Y = from.y;
-    const controlPoint2X = to.x - dx * curveFactor;
-    const controlPoint2Y = to.y;
-    
-    return `M ${from.x} ${from.y} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${to.x} ${to.y}`;
+    const curveStrength = Math.max(minCurve, Math.min(maxCurve, dx * 0.4));
+    const controlPoint1 = { x: from.x + curveStrength, y: from.y };
+    const controlPoint2 = { x: to.x - curveStrength, y: to.y };
+    return `M${from.x},${from.y} C${controlPoint1.x},${controlPoint1.y} ${controlPoint2.x},${controlPoint2.y} ${to.x},${to.y}`;
   }, []);
 
   // Calculate connections between nodes with curved paths
@@ -276,6 +289,65 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
     stopEditing();
   }, [stopEditing]);
 
+  // Add/replace these handlers inside the component
+  const handleTouchStart = (e: any) => {
+    if (e.evt.touches.length === 2) {
+      const touch1 = e.evt.touches[0];
+      const touch2 = e.evt.touches[1];
+      const center = {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2,
+      };
+      initialTouchCenter.current = center;
+      initialCanvasPosition.current = { ...canvasPosition };
+      initialDist.current = Math.hypot(
+        touch1.clientX - touch2.clientX,
+        touch1.clientY - touch2.clientY
+      );
+      initialScale.current = canvasScale;
+    }
+  };
+
+  const handleTouchMove = (e: any) => {
+    if (e.evt.touches.length === 2) {
+      e.evt.preventDefault();
+      const touch1 = e.evt.touches[0];
+      const touch2 = e.evt.touches[1];
+      const center = {
+        x: (touch1.clientX + touch2.clientX) / 2,
+        y: (touch1.clientY + touch2.clientY) / 2,
+      };
+      const dist = Math.hypot(
+        touch1.clientX - touch2.clientX,
+        touch1.clientY - touch2.clientY
+      );
+      // Pan: always relative to the initial gesture center
+      if (initialTouchCenter.current && initialCanvasPosition.current) {
+        const dx = center.x - initialTouchCenter.current.x;
+        const dy = center.y - initialTouchCenter.current.y;
+        setCanvasPosition({
+          x: initialCanvasPosition.current.x + dx,
+          y: initialCanvasPosition.current.y + dy,
+        });
+      }
+      // Zoom: always relative to the initial scale and distance
+      if (initialDist.current && initialScale.current) {
+        const scaleBy = dist / initialDist.current;
+        const newScale = Math.max(0.1, Math.min(3, initialScale.current * scaleBy));
+        useMindMapStore.getState().setCanvasScale(newScale);
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: any) => {
+    if (e.evt.touches.length < 2) {
+      initialTouchCenter.current = null;
+      initialCanvasPosition.current = null;
+      initialDist.current = null;
+      initialScale.current = null;
+    }
+  };
+
   useEffect(() => {
     const stage = stageRef.current;
     if (stage) {
@@ -305,11 +377,11 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
             <Path
               key={`connection-${index}`}
               data={path}
-              stroke="#94a3b8"
-              strokeWidth={1.5}
+              stroke="#332A27"
+              strokeWidth={2}
               lineCap="round"
               lineJoin="round"
-              opacity={1}
+              opacity={0.9}
             />
           ))}
           
@@ -363,18 +435,18 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
                 {/* Node text */}
                 <Text
                   text={node.title}
-                  fontSize={14}
-                  fontFamily="Inter, system-ui, sans-serif"
+                  fontSize={12}
+                  fontFamily="Montserrat, Inter, system-ui, sans-serif"
                   fontStyle="normal"
-                  fontWeight={500}
-                  fill={selectedNodeId === node.id ? '#1e293b' : 'white'}
-                  width={nodeWidth - 16}
+                  fontWeight={600}
+                  fill="#fff"
+                  width={nodeWidth - 24}
                   height={NODE_HEIGHT}
-                  x={8}
+                  x={12}
                   y={0}
                   align="center"
                   verticalAlign="middle"
-                  wrap="word"
+                  wrap="none"
                   ellipsis
                 />
                 
