@@ -377,8 +377,8 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
             <Path
               key={`connection-${index}`}
               data={path}
-              stroke="#332A27"
-              strokeWidth={2}
+              stroke="#545454"
+              strokeWidth={1.5}
               lineCap="round"
               lineJoin="round"
               opacity={0.9}

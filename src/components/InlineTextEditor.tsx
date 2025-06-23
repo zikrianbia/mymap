@@ -90,7 +90,7 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
             fontFamily: 'Montserrat, Inter, system-ui, sans-serif',
             fontWeight: 500,
             textAlign: 'center',
-            lineHeight: '24px',
+            lineHeight: 'normal',
           }}
           placeholder="Enter title..."
         />
