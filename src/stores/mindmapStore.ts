@@ -156,7 +156,7 @@ const createInitialState = (): MindMapState => {
     editingNodeId: null,
     isDarkMode: false,
     canvasPosition: { x: 0, y: 0 },
-    canvasScale: 1.2,
+    canvasScale: 1.3,
     showToolbar: true,
     history: {
       past: [],
@@ -565,7 +565,7 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
           rootNodeId: data.rootNodeId,
           isDarkMode: data.isDarkMode || false,
           canvasPosition: data.canvasPosition || { x: 0, y: 0 },
-          canvasScale: data.canvasScale || 1,
+          canvasScale: 1.3,
           selectedNodeId: data.rootNodeId,
         });
       }

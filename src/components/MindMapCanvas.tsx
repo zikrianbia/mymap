@@ -437,7 +437,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
                   text={node.title}
                   fontSize={12}
                   fontFamily="Montserrat, Inter, system-ui, sans-serif"
-                  fontStyle="normal"
+                  fontStyle={node.isCompleted ? "normal" : "normal"}
                   fontWeight={600}
                   fill="#fff"
                   width={nodeWidth - 24}
@@ -448,6 +448,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
                   verticalAlign="middle"
                   wrap="none"
                   ellipsis
+                  textDecoration={node.isCompleted ? "line-through" : undefined}
                 />
                 
                 {/* Collapse indicator */}
@@ -467,29 +468,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
                       style={{ cursor: 'pointer' }}
                     />
                   </>
-                )}
-                
-                {/* Completion indicator */}
-                {node.isCompleted && (
-                  <Circle
-                    x={15}
-                    y={15}
-                    radius={8}
-                    fill="#10b981"
-                    stroke="white"
-                    strokeWidth={2}
-                  />
-                )}
-                
-                {node.isCompleted && (
-                  <Text
-                    text="✓"
-                    x={11}
-                    y={11}
-                    fontSize={12}
-                    fontStyle="bold"
-                    fill="white"
-                  />
                 )}
               </Group>
             );

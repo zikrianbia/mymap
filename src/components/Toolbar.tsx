@@ -46,6 +46,28 @@ const Toolbar: React.FC = () => {
     }
   };
 
+  const handleExportMd = () => {
+    // Export a simple Markdown representation of the mind map
+    const { nodes, rootNodeId } = useMindMapStore.getState();
+    function renderNodeMd(nodeId: string, depth = 0) {
+      const node = nodes[nodeId];
+      if (!node) return '';
+      let md = `${'  '.repeat(depth)}- ${node.title}\n`;
+      node.childrenIds.forEach(childId => {
+        md += renderNodeMd(childId, depth + 1);
+      });
+      return md;
+    }
+    const md = renderNodeMd(rootNodeId);
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mindmap-${new Date().toISOString().split('T')[0]}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Center the root node in the viewport
   const handleRebalanceAndCenter = () => {
     rebalanceLayout();
@@ -64,81 +86,46 @@ const Toolbar: React.FC = () => {
   return (
     <>
       {/* Toolbar toggle button */}
-      <button
-        onClick={toggleToolbar}
-        className={`fixed top-4 left-4 z-40 p-2 rounded-md shadow-lg transition-all bg-white text-gray-900 hover:bg-gray-50`}
-      >
-        <Menu size={20} />
-      </button>
+      <div className="fixed top-4 left-4 z-40 flex flex-row items-center">
+        <button
+          onClick={toggleToolbar}
+          className={`p-2 rounded-md shadow-lg transition-all bg-white text-gray-900 hover:bg-gray-50 mt-2.5`}
+        >
+          <Menu size={20} />
+        </button>
+      </div>
 
       {/* Toolbar */}
       <div className={`fixed top-4 left-16 z-30 transition-all duration-300 ${
         showToolbar ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
       }`}>
         <div className={`flex items-center space-x-2 p-3 rounded-lg shadow-lg bg-white`}>
-          {/* Undo/Redo */}
-          <div className="flex space-x-1">
-            <button
-              onClick={undo}
-              disabled={history.past.length === 0}
-              className={`p-2 rounded-md transition-colors ${
-                history.past.length === 0
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo size={18} />
-            </button>
-            <button
-              onClick={redo}
-              disabled={history.future.length === 0}
-              className={`p-2 rounded-md transition-colors ${
-                history.future.length === 0
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              title="Redo (Ctrl+Y)"
-            >
-              <Redo size={18} />
-            </button>
-          </div>
-
-          <div className="w-px h-6 bg-gray-300" />
-
           {/* Rebalance Layout */}
           <button
             onClick={handleRebalanceAndCenter}
-            className={`p-2 rounded-md transition-colors text-gray-700 hover:bg-gray-100`}
+            className={`p-2 rounded-md transition-colors flex flex-row items-center text-gray-700 hover:bg-gray-100`}
             title="Rebalance Layout (Ctrl+R)"
           >
-            <Grid size={18} />
+            <Grid size={18} /> <span className="ml-1 text-xs">Recenter</span>
           </button>
-
-          <div className="w-px h-6 bg-gray-300" />
-
-          {/* Zoom Level Display */}
-          <span className="px-2 text-sm font-medium text-gray-700 select-none" title="Zoom Level">
-            {Math.round((canvasScale / 1.2) * 100)}%
-          </span>
 
           <div className="w-px h-6 bg-gray-300" />
 
           {/* Export options */}
           <button
-            onClick={handleExportJson}
-            className={`p-2 rounded-md transition-colors text-gray-700 hover:bg-gray-100`}
-            title="Export as JSON"
+            onClick={handleExportMd}
+            className={`p-2 rounded-md transition-colors flex flex-row items-center text-gray-700 hover:bg-gray-100`}
+            title="Export as Markdown"
           >
-            <FileText size={18} />
+            <FileText size={18} /> <span className="ml-1 text-xs">Export MD</span>
           </button>
           
           <button
             onClick={handleExportPng}
-            className={`p-2 rounded-md transition-colors text-gray-700 hover:bg-gray-100`}
+            className={`p-2 rounded-md transition-colors flex flex-row items-center text-gray-700 hover:bg-gray-100`}
             title="Export as PNG"
           >
-            <Image size={18} />
+            <Image size={18} /> <span className="ml-1 text-xs">Export PNG</span>
           </button>
         </div>
       </div>
