@@ -18,7 +18,9 @@
     "zustand": "^4.4.7",
     "jspdf": "^2.5.1",
     "html2canvas": "^1.4.1",
-    "nanoid": "^5.0.4"
+    "nanoid": "^5.0.4",
+    "@supabase/supabase-js": "^2.39.0",
+    "react-router-dom": "^6.20.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

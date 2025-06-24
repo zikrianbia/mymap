@@ -3,17 +3,16 @@ import { nanoid } from 'nanoid';
 import { MindMapState, MindMapNode, Position, DEFAULT_COLORS } from '../types/mindmap';
 
 // Layout constants
-const VERTICAL_SPACING = 14; // Increased for more vertical space between nodes
-const MIN_HORIZONTAL_SPACING = 50; // Reduced for shorter horizontal connection lines
+const VERTICAL_SPACING = 14;
+const MIN_HORIZONTAL_SPACING = 50;
 const NODE_HEIGHT = 32;
-const NODE_PADDING = 6; // Minimum padding to prevent text overlap
+const NODE_PADDING = 6;
 
 // Calculate node width based on content
 const getNodeWidth = (node: MindMapNode): number => {
   const fontSize = 14;
-  // Estimate text width: fontSize * 0.6 * length (approximation)
   const textWidth = 0.6 * fontSize * node.title.length;
-  const padding = 8; // 4px left, 4px right
+  const padding = 8;
   const baseWidth = textWidth + padding;
   return Math.max(32, Math.min(320, baseWidth));
 };
@@ -27,7 +26,6 @@ const calculateHorizontalSpacing = (parentNode: MindMapNode, childNode: MindMapN
 const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: string): Record<string, MindMapNode> => {
   const updatedNodes = { ...nodes };
   
-  // First pass: calculate the total height needed for each subtree
   const calculateSubtreeHeight = (nodeId: string): number => {
     const node = updatedNodes[nodeId];
     if (!node) return 0;
@@ -42,7 +40,6 @@ const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: str
     return Math.max(totalChildHeight + totalSpacing, NODE_HEIGHT);
   };
   
-  // Second pass: position nodes using the calculated heights
   const layoutNode = (nodeId: string, parentX: number, parentY: number, level: number): void => {
     const node = updatedNodes[nodeId];
     if (!node) return;
@@ -57,7 +54,6 @@ const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: str
     if (children.length === 0) {
       return;
     }
-    // Calculate total height needed for all children
     const totalChildHeight = children.reduce((sum, child) => sum + calculateSubtreeHeight(child.id), 0);
     const totalSpacing = (children.length - 1) * VERTICAL_SPACING;
     const totalHeight = totalChildHeight + totalSpacing;
@@ -72,7 +68,6 @@ const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: str
     });
   };
   
-  // Start layout from root
   const rootNode = updatedNodes[rootId];
   if (rootNode) {
     layoutNode(rootId, rootNode.position.x, rootNode.position.y, 0);
@@ -81,7 +76,6 @@ const calculateBalancedLayout = (nodes: Record<string, MindMapNode>, rootId: str
   return updatedNodes;
 };
 
-// Rebalance the entire tree layout
 const rebalanceTree = (nodes: Record<string, MindMapNode>, rootId: string): Record<string, MindMapNode> => {
   return calculateBalancedLayout(nodes, rootId);
 };
@@ -124,7 +118,11 @@ interface MindMapActions {
   undo: () => void;
   redo: () => void;
   
-  // Persistence
+  // Data loading
+  loadMindmapFromData: (nodes: Record<string, MindMapNode>, rootNodeId: string) => void;
+  setCurrentPageId: (pageId: string) => void;
+  
+  // Persistence (legacy - now handled by service)
   saveMindMap: () => void;
   loadMindMap: () => void;
   exportAsJson: () => string;
@@ -158,6 +156,7 @@ const createInitialState = (): MindMapState => {
     canvasPosition: { x: 0, y: 0 },
     canvasScale: 1.3,
     showToolbar: true,
+    currentPageId: null,
     history: {
       past: [],
       present: JSON.stringify({ nodes: { [rootId]: rootNode }, rootNodeId: rootId }),
@@ -221,7 +220,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         };
       }
 
-      // Apply balanced layout to the entire tree
       const balancedNodes = rebalanceTree(updatedNodes, state.rootNodeId);
 
       return {
@@ -242,7 +240,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         [nodeId]: { ...state.nodes[nodeId], ...updates }
       }
     }));
-    get().saveMindMap();
   },
 
   deleteNode: (nodeId) => {
@@ -254,7 +251,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     set((prevState) => {
       const updatedNodes = { ...prevState.nodes };
       
-      // Remove from parent's children list
       if (node.parentId) {
         const parent = updatedNodes[node.parentId];
         updatedNodes[node.parentId] = {
@@ -263,7 +259,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         };
       }
       
-      // Delete node and all its children recursively
       const deleteRecursively = (id: string) => {
         const nodeToDelete = updatedNodes[id];
         if (nodeToDelete) {
@@ -274,7 +269,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
       
       deleteRecursively(nodeId);
       
-      // Apply balanced layout to the remaining tree
       const balancedNodes = rebalanceTree(updatedNodes, prevState.rootNodeId);
       
       return {
@@ -285,7 +279,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     });
 
     get().saveToHistory();
-    get().saveMindMap();
   },
 
   moveNode: (nodeId, newPosition) => {
@@ -295,7 +288,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         [nodeId]: { ...state.nodes[nodeId], position: newPosition }
       }
     }));
-    get().saveMindMap();
   },
 
   reassignParent: (nodeId, newParentId) => {
@@ -305,7 +297,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     
     if (!node || !newParent || nodeId === newParentId) return;
     
-    // Prevent cycles
     const isDescendant = (checkNodeId: string, ancestorId: string): boolean => {
       const checkNode = state.nodes[checkNodeId];
       if (!checkNode || !checkNode.parentId) return false;
@@ -318,7 +309,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     set((prevState) => {
       const updatedNodes = { ...prevState.nodes };
       
-      // Remove from old parent's children list
       if (node.parentId) {
         const oldParent = updatedNodes[node.parentId];
         updatedNodes[node.parentId] = {
@@ -327,20 +317,17 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         };
       }
       
-      // Add to new parent's children list
       updatedNodes[newParentId] = {
         ...updatedNodes[newParentId],
         childrenIds: [...updatedNodes[newParentId].childrenIds, nodeId]
       };
       
-      // Update node's parent reference and level
       updatedNodes[nodeId] = {
         ...updatedNodes[nodeId],
         parentId: newParentId,
         level: newParent.level + 1
       };
       
-      // Update levels of all descendants
       const updateDescendantLevels = (parentNodeId: string) => {
         const parentNode = updatedNodes[parentNodeId];
         parentNode.childrenIds.forEach(childId => {
@@ -354,14 +341,12 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
       
       updateDescendantLevels(nodeId);
       
-      // Apply balanced layout to the entire tree
       const balancedNodes = rebalanceTree(updatedNodes, prevState.rootNodeId);
       
       return { nodes: balancedNodes };
     });
 
     get().saveToHistory();
-    get().saveMindMap();
   },
 
   selectNode: (nodeId) => {
@@ -384,7 +369,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
 
   stopEditing: () => {
     set({ editingNodeId: null });
-    get().saveMindMap();
   },
 
   toggleNodeCollapse: (nodeId) => {
@@ -397,7 +381,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         }
       }
     }));
-    get().saveMindMap();
   },
 
   toggleNodeCompletion: (nodeId) => {
@@ -410,7 +393,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         }
       }
     }));
-    get().saveMindMap();
   },
 
   changeNodeColor: (nodeId, color) => {
@@ -420,14 +402,12 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         [nodeId]: { ...state.nodes[nodeId], color }
       }
     }));
-    get().saveMindMap();
   },
 
   rebalanceLayout: () => {
     const state = get();
     console.log('Rebalancing layout...', Object.keys(state.nodes).length, 'nodes');
     
-    // Small delay to make the rebalancing more visible
     setTimeout(() => {
       const balancedNodes = rebalanceTree(state.nodes, state.rootNodeId);
       set({ nodes: balancedNodes });
@@ -448,7 +428,7 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     const oldScale = state.canvasScale;
     const newScale = Math.max(0.1, Math.min(3, oldScale + delta));
     if (newScale === oldScale) return;
-    // Calculate new position so that the zoom center stays fixed
+    
     const canvasPos = state.canvasPosition;
     const mousePointTo = {
       x: (center.x - canvasPos.x) / oldScale,
@@ -463,7 +443,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
 
   toggleDarkMode: () => {
     set((state) => ({ isDarkMode: !state.isDarkMode }));
-    get().saveMindMap();
   },
 
   toggleToolbar: () => {
@@ -530,48 +509,28 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     });
   },
 
+  loadMindmapFromData: (nodes, rootNodeId) => {
+    set({
+      nodes,
+      rootNodeId,
+      selectedNodeId: rootNodeId,
+      editingNodeId: null,
+      canvasPosition: { x: 0, y: 0 },
+      canvasScale: 1.3,
+    });
+  },
+
+  setCurrentPageId: (pageId) => {
+    set({ currentPageId: pageId });
+  },
+
+  // Legacy methods for backward compatibility
   saveMindMap: () => {
-    const state = get();
-    const data = {
-      nodes: state.nodes,
-      rootNodeId: state.rootNodeId,
-      isDarkMode: state.isDarkMode,
-      canvasPosition: state.canvasPosition,
-      canvasScale: state.canvasScale,
-    };
-    localStorage.setItem('mindmap-data', JSON.stringify(data));
+    // This is now handled by the service layer
   },
 
   loadMindMap: () => {
-    try {
-      const saved = localStorage.getItem('mindmap-data');
-      if (saved) {
-        const data = JSON.parse(saved);
-        // Migrate any blue nodes to black
-        const migratedNodes = Object.fromEntries(
-          Object.entries(data.nodes || {}).map(([id, node]) => {
-            const n = node as any;
-            return [
-              id,
-              {
-                ...n,
-                color: (n.color === '#3B82F6' || n.color === 'blue' || n.color === DEFAULT_COLORS.blue) ? '#000000' : n.color
-              }
-            ];
-          })
-        );
-        set({
-          nodes: migratedNodes,
-          rootNodeId: data.rootNodeId,
-          isDarkMode: data.isDarkMode || false,
-          canvasPosition: data.canvasPosition || { x: 0, y: 0 },
-          canvasScale: 1.3,
-          selectedNodeId: data.rootNodeId,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load mindmap:', error);
-    }
+    // This is now handled by the service layer
   },
 
   exportAsJson: () => {
@@ -597,7 +556,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     const currentNode = state.nodes[currentNodeId];
     if (!currentNode) return;
 
-    // Get all visible nodes (not collapsed)
     const getVisibleNodes = () => {
       const visible: MindMapNode[] = [];
       const visited = new Set<string>();
@@ -622,7 +580,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     };
 
     if (direction === 'ArrowUp' || direction === 'ArrowDown') {
-      // Prefer nearest visible sibling (same parent, closest Y)
       let siblings: MindMapNode[] = [];
       if (current.parentId) {
         const parent = state.nodes[current.parentId];
@@ -632,7 +589,7 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
             .filter(n => n && n.id !== currentNodeId && visibleNodes.some(vn => vn.id === n.id));
         }
       }
-      // Find nearest sibling vertically
+      
       let bestSibling: MindMapNode | null = null;
       let bestSiblingDist = Infinity;
       for (const sib of siblings) {
@@ -650,7 +607,7 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         get().selectNode(bestSibling.id);
         return;
       }
-      // If no sibling, fall back to visually closest node above/below
+      
       let bestNode = null;
       let bestDist = Infinity;
       for (const node of visibleNodes) {
@@ -672,7 +629,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     }
 
     if (direction === 'ArrowRight') {
-      // Go to first visible child (if any)
       const visibleChild = current.childrenIds
         .map(id => state.nodes[id])
         .find(n => n && visibleNodes.some(vn => vn.id === n.id));
@@ -683,7 +639,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     }
 
     if (direction === 'ArrowLeft') {
-      // Go to parent node (if any)
       if (current.parentId && state.nodes[current.parentId]) {
         get().selectNode(current.parentId);
       }

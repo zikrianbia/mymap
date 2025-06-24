@@ -28,6 +28,7 @@ export interface MindMapState {
   canvasPosition: Position;
   canvasScale: number;
   showToolbar: boolean;
+  currentPageId: string | null;
   history: {
     past: string[];
     present: string;
