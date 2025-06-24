@@ -388,15 +388,16 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
           {/* Nodes */}
           {visibleNodes.map((node) => {
             const nodeWidth = getNodeWidth(node);
+            const isRoot = node.id === rootNodeId;
             return (
               <Group
                 key={node.id}
                 x={node.position.x}
                 y={node.position.y}
-                draggable
-                onDragStart={(e) => handleNodeDragStart(node.id, e)}
-                onDragMove={(e) => handleNodeDragMove(node.id, e)}
-                onDragEnd={(e) => handleNodeDragEnd(node.id, e)}
+                draggable={!isRoot}
+                onDragStart={isRoot ? undefined : (e) => handleNodeDragStart(node.id, e)}
+                onDragMove={isRoot ? undefined : (e) => handleNodeDragMove(node.id, e)}
+                onDragEnd={isRoot ? undefined : (e) => handleNodeDragEnd(node.id, e)}
                 onClick={(e) => handleNodeClick(node.id, e)}
                 onDblClick={(e) => handleNodeDoubleClick(node.id, e)}
                 onContextMenu={(e) => handleNodeContextMenu(node.id, e)}
