@@ -14,13 +14,17 @@ import {
   SortAsc,
   SortDesc,
   Clock,
-  FileText
+  FileText,
+  LogOut,
+  User
 } from 'lucide-react';
 import { MindmapService } from '../services/mindmapService';
 import { MindmapPage } from '../types/database';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [pages, setPages] = useState<MindmapPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,6 +88,14 @@ const Dashboard: React.FC = () => {
       setPages(prev => [duplicatedPage, ...prev]);
     } catch (error) {
       console.error('Failed to duplicate page:', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Failed to sign out:', error);
     }
   };
 
@@ -153,13 +165,33 @@ const Dashboard: React.FC = () => {
                 {pages.length} {pages.length === 1 ? 'mindmap' : 'mindmaps'}
               </span>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <Plus size={20} />
-              <span>New Mindmap</span>
-            </button>
+            
+            <div className="flex items-center space-x-4">
+              {/* User Info */}
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User size={16} />
+                  <span>{user?.email}</span>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+              
+              <div className="w-px h-6 bg-gray-300"></div>
+              
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Plus size={20} />
+                <span>New Mindmap</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

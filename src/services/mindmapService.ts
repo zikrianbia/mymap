@@ -4,9 +4,12 @@ import { MindMapNode } from '../types/mindmap';
 
 export class MindmapService {
   static async getAllPages(): Promise<MindmapPage[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('mindmap_pages')
       .select('*')
+      .eq('user_id', user?.id)
       .order('updated_at', { ascending: false });
 
     if (error) {
@@ -18,10 +21,13 @@ export class MindmapService {
   }
 
   static async getPageById(id: string): Promise<MindmapPage | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('mindmap_pages')
       .select('*')
       .eq('id', id)
+      .eq('user_id', user?.id)
       .single();
 
     if (error) {
@@ -36,6 +42,12 @@ export class MindmapService {
   }
 
   static async createPage(title: string, description?: string): Promise<MindmapPage> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     // Create initial root node
     const rootNodeId = crypto.randomUUID();
     const initialNodes = {
@@ -59,6 +71,7 @@ export class MindmapService {
       .insert({
         title,
         description,
+        user_id: user.id,
         nodes: {
           nodes: initialNodes,
           rootNodeId: rootNodeId
@@ -76,10 +89,13 @@ export class MindmapService {
   }
 
   static async updatePage(id: string, updates: Partial<Pick<MindmapPage, 'title' | 'description' | 'nodes'>>): Promise<MindmapPage> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from('mindmap_pages')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', user?.id)
       .select()
       .single();
 
@@ -92,10 +108,13 @@ export class MindmapService {
   }
 
   static async deletePage(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { error } = await supabase
       .from('mindmap_pages')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user?.id);
 
     if (error) {
       console.error('Error deleting mindmap page:', error);
@@ -104,6 +123,12 @@ export class MindmapService {
   }
 
   static async duplicatePage(id: string): Promise<MindmapPage> {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const originalPage = await this.getPageById(id);
     if (!originalPage) {
       throw new Error('Page not found');
@@ -114,6 +139,7 @@ export class MindmapService {
       .insert({
         title: `${originalPage.title} (Copy)`,
         description: originalPage.description,
+        user_id: user.id,
         nodes: originalPage.nodes
       })
       .select()
