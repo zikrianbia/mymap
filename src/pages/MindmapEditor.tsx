@@ -28,7 +28,9 @@ const MindmapEditor: React.FC = () => {
     loadMindmapFromData,
     nodes,
     rootNodeId,
-    setCurrentPageId
+    setCurrentPageId,
+    editingNodeId,
+    stopEditing
   } = useMindMapStore();
   
   const [windowSize, setWindowSize] = useState({
@@ -167,7 +169,7 @@ const MindmapEditor: React.FC = () => {
     setTempTitle('');
   };
 
-  // Prevent Tab navigation outside mindmap
+  // Enhanced Tab key handling for node creation during inline editing
   useEffect(() => {
     const handleTabKey = (e: KeyboardEvent) => {
       if (e.key === 'Tab') {
@@ -190,12 +192,30 @@ const MindmapEditor: React.FC = () => {
           mindmapRef.current?.focus();
           return false;
         }
+        
+        // Special handling for Tab during inline editing
+        if (isInInput && editingNodeId) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          
+          // First, stop editing the current node
+          stopEditing();
+          
+          // Then create a new child node after a brief delay to ensure the edit is saved
+          setTimeout(() => {
+            const { createNode } = useMindMapStore.getState();
+            createNode(editingNodeId);
+          }, 50);
+          
+          return false;
+        }
       }
     };
 
     document.addEventListener('keydown', handleTabKey, true);
     return () => document.removeEventListener('keydown', handleTabKey, true);
-  }, [selectedNodeId]);
+  }, [selectedNodeId, editingNodeId, stopEditing]);
 
   // Custom zoom shortcuts
   useEffect(() => {

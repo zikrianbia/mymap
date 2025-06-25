@@ -220,16 +220,24 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         };
       }
 
+      // Stop editing the current node before rebalancing
+      const currentEditingId = state.editingNodeId;
+      
+      // Rebalance layout immediately to get proper positions
       const balancedNodes = rebalanceTree(updatedNodes, state.rootNodeId);
 
       return {
         nodes: balancedNodes,
         selectedNodeId: newId,
-        editingNodeId: newId,
+        editingNodeId: newId, // Start editing the new node
       };
     });
 
-    get().saveToHistory();
+    // Save to history after a short delay to ensure layout is complete
+    setTimeout(() => {
+      get().saveToHistory();
+    }, 100);
+    
     return newId;
   },
 

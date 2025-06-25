@@ -56,6 +56,7 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
         width: width,
         height: height,
         zIndex: 1000,
+        pointerEvents: 'auto',
       }}
     >
       <div
@@ -99,4 +100,4 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   );
 };
 
-export default InlineTextEditor; 
+export default InlineTextEditor;
