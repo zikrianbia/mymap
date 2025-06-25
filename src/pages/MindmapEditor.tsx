@@ -169,7 +169,7 @@ const MindmapEditor: React.FC = () => {
     setTempTitle('');
   };
 
-  // Enhanced Tab key handling for node creation during inline editing
+  // Simplified Tab key handling - let the inline editor handle Tab during editing
   useEffect(() => {
     const handleTabKey = (e: KeyboardEvent) => {
       if (e.key === 'Tab') {
@@ -179,6 +179,7 @@ const MindmapEditor: React.FC = () => {
         
         const isInMindmap = document.activeElement?.closest('[data-mindmap-app]');
         
+        // If we're in the mindmap but not in an input, handle Tab for node creation
         if (isInMindmap && !isInInput) {
           e.preventDefault();
           e.stopPropagation();
@@ -193,29 +194,14 @@ const MindmapEditor: React.FC = () => {
           return false;
         }
         
-        // Special handling for Tab during inline editing
-        if (isInInput && editingNodeId) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          
-          // First, stop editing the current node
-          stopEditing();
-          
-          // Then create a new child node after a brief delay to ensure the edit is saved
-          setTimeout(() => {
-            const { createNode } = useMindMapStore.getState();
-            createNode(editingNodeId);
-          }, 50);
-          
-          return false;
-        }
+        // If we're in an inline editor, let the InlineTextEditor component handle it
+        // Don't prevent default here - let the inline editor's onKeyDown handle Tab
       }
     };
 
     document.addEventListener('keydown', handleTabKey, true);
     return () => document.removeEventListener('keydown', handleTabKey, true);
-  }, [selectedNodeId, editingNodeId, stopEditing]);
+  }, [selectedNodeId]);
 
   // Custom zoom shortcuts
   useEffect(() => {

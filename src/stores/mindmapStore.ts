@@ -83,6 +83,7 @@ const rebalanceTree = (nodes: Record<string, MindMapNode>, rootId: string): Reco
 interface MindMapActions {
   // Node operations
   createNode: (parentId: string | null, isSibling?: boolean) => string;
+  createNodeDuringEdit: (parentId: string | null, isSibling?: boolean) => string;
   updateNode: (nodeId: string, updates: Partial<MindMapNode>) => void;
   deleteNode: (nodeId: string) => void;
   moveNode: (nodeId: string, newPosition: Position) => void;
@@ -220,24 +221,90 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
         };
       }
 
-      // Stop editing the current node before rebalancing
-      const currentEditingId = state.editingNodeId;
-      
-      // Rebalance layout immediately to get proper positions
       const balancedNodes = rebalanceTree(updatedNodes, state.rootNodeId);
 
       return {
         nodes: balancedNodes,
         selectedNodeId: newId,
-        editingNodeId: newId, // Start editing the new node
+        editingNodeId: newId,
       };
     });
 
-    // Save to history after a short delay to ensure layout is complete
+    get().saveToHistory();
+    return newId;
+  },
+
+  createNodeDuringEdit: (parentId, isSibling = false) => {
+    const state = get();
+    const newId = nanoid();
+    
+    let actualParentId = parentId;
+    let level = 0;
+    let position = { x: 400, y: 300 };
+
+    if (parentId) {
+      const parentNode = state.nodes[parentId];
+      if (isSibling && parentNode.parentId) {
+        actualParentId = parentNode.parentId;
+        const actualParent = state.nodes[parentNode.parentId];
+        level = actualParent.level + 1;
+        // Position sibling below the current node
+        position = {
+          x: parentNode.position.x,
+          y: parentNode.position.y + 60
+        };
+      } else {
+        level = parentNode.level + 1;
+        // Position child to the right of parent
+        const nodeWidth = getNodeWidth(parentNode);
+        position = {
+          x: parentNode.position.x + nodeWidth + MIN_HORIZONTAL_SPACING,
+          y: parentNode.position.y + (parentNode.childrenIds.length * 60)
+        };
+      }
+    }
+
+    const newNode: MindMapNode = {
+      id: newId,
+      title: 'New Node',
+      position,
+      color: DEFAULT_COLORS.black,
+      isCompleted: false,
+      isCollapsed: false,
+      parentId: actualParentId,
+      childrenIds: [],
+      level,
+      isSelected: false,
+      isEditing: false,
+    };
+
+    set((state) => {
+      const updatedNodes = { ...state.nodes, [newId]: newNode };
+      
+      if (actualParentId) {
+        const parent = updatedNodes[actualParentId];
+        updatedNodes[actualParentId] = {
+          ...parent,
+          childrenIds: [...parent.childrenIds, newId]
+        };
+      }
+
+      // Don't rebalance immediately during editing - just add the node
+      return {
+        nodes: updatedNodes,
+        selectedNodeId: newId,
+        editingNodeId: newId,
+      };
+    });
+
+    // Rebalance after a delay to allow the inline editor to position correctly
     setTimeout(() => {
+      const currentState = get();
+      const balancedNodes = rebalanceTree(currentState.nodes, currentState.rootNodeId);
+      set({ nodes: balancedNodes });
       get().saveToHistory();
     }, 100);
-    
+
     return newId;
   },
 

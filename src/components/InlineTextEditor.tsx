@@ -20,7 +20,7 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   onSave,
   onCancel,
 }) => {
-  const { nodes } = useMindMapStore();
+  const { nodes, createNodeDuringEdit } = useMindMapStore();
   const node = nodes[nodeId];
   const [text, setText] = useState(node?.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +39,17 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
     } else if (e.key === 'Escape') {
       e.preventDefault();
       onCancel();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Save current text first
+      onSave(text.trim() || 'Untitled');
+      
+      // Create new child node using the special method for editing
+      setTimeout(() => {
+        createNodeDuringEdit(nodeId);
+      }, 50);
     }
   };
 
