@@ -20,6 +20,7 @@ function App() {
   } | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
 
   // Handle window resize
   useEffect(() => {
@@ -134,6 +135,32 @@ function App() {
     window.addEventListener('keydown', handleZoomKeys, { capture: true });
     return () => window.removeEventListener('keydown', handleZoomKeys, true);
   }, []);
+
+  useEffect(() => {
+    // Simple mobile device detection
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+      setShowMobileWarning(true);
+    }
+  }, []);
+
+  if (showMobileWarning) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50 pointer-events-none">
+        <div className="bg-white rounded-lg shadow-xl p-4 max-w-xs w-72 text-center pointer-events-auto border border-gray-200">
+          <div className="flex flex-col items-center">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-2" style={{ opacity: 0.18 }}>
+              <rect x="6" y="10" width="36" height="22" rx="3" fill="#000" />
+              <rect x="14" y="36" width="20" height="3" rx="1.5" fill="#000" />
+              <rect x="20" y="40" width="8" height="2" rx="1" fill="#000" />
+            </svg>
+            <div className="text-lg font-bold mb-2 text-black">Desktop Only</div>
+          </div>
+          <div className="text-gray-700 text-sm">This app is designed for desktop use.<br/>Please open it on a desktop or laptop computer for the best experience.</div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
