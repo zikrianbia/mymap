@@ -131,6 +131,9 @@ interface MindMapActions {
   
   // Search
   searchNodes: (query: string) => MindMapNode[];
+  
+  // New actions
+  setEditingText: (text: string) => void;
 }
 
 const createInitialState = (): MindMapState => {
@@ -163,6 +166,7 @@ const createInitialState = (): MindMapState => {
       present: JSON.stringify({ nodes: { [rootId]: rootNode }, rootNodeId: rootId }),
       future: [],
     },
+    editingText: '',
   };
 };
 
@@ -690,4 +694,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
       return;
     }
   },
+
+  setEditingText: (text) => set({ editingText: text }),
 }));

@@ -20,7 +20,7 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
   onSave,
   onCancel,
 }) => {
-  const { nodes } = useMindMapStore();
+  const { nodes, setEditingText } = useMindMapStore();
   const node = nodes[nodeId];
   const [text, setText] = useState(node?.title || '');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,7 +30,13 @@ const InlineTextEditor: React.FC<InlineTextEditorProps> = ({
       inputRef.current.focus();
       inputRef.current.select();
     }
+    setEditingText(text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setEditingText(text);
+  }, [text, setEditingText]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {

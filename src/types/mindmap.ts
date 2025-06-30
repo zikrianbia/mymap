@@ -33,6 +33,7 @@ export interface MindMapState {
     present: string;
     future: string[];
   };
+  editingText?: string;
 }
 
 export interface NodeColors {

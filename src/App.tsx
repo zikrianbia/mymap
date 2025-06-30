@@ -70,42 +70,38 @@ function App() {
     setContextMenu({ nodeId, position });
   };
 
-  // Prevent Tab navigation outside mindmap
+  // Prevent Tab navigation outside mindmap and handle node creation
   useEffect(() => {
     const handleTabKey = (e: KeyboardEvent) => {
       if (e.key === 'Tab') {
-        const isInInput = document.activeElement?.tagName === 'INPUT' || 
-                         document.activeElement?.tagName === 'TEXTAREA' ||
-                         document.activeElement?.closest('[data-inline-editor]');
-        
-        const isInMindmap = document.activeElement?.closest('[data-mindmap-app]');
-        
-        // If we're in mindmap but not in an input field, prevent Tab navigation
-        if (isInMindmap && !isInInput) {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          
-          // Create new node if we have a selected node
-          if (selectedNodeId) {
-            const { createNode } = useMindMapStore.getState();
-            createNode(selectedNodeId);
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const { selectedNodeId, editingNodeId, editingText, stopEditing, selectNode, createNode, startEditing, updateNode } = useMindMapStore.getState();
+        // If currently editing a node, save and select the node (end editing)
+        if (editingNodeId) {
+          if (editingText !== undefined) {
+            updateNode(editingNodeId, { title: editingText.trim() || 'Untitled' });
           }
-          
-          // Keep focus in mindmap
-          mindmapRef.current?.focus();
-          return false;
+          stopEditing();
+          selectNode(editingNodeId);
+          return;
         }
+        // If a node is selected and not editing, create a child and start editing it
+        if (selectedNodeId) {
+          const newNodeId = createNode(selectedNodeId);
+          startEditing(newNodeId);
+        }
+        // Never select the canvas
       }
     };
 
-    // Use capture phase to catch Tab before it reaches browser
     document.addEventListener('keydown', handleTabKey, true);
-    
     return () => {
       document.removeEventListener('keydown', handleTabKey, true);
     };
-  }, [selectedNodeId]);
+  }, []);
 
   // Custom zoom in/out with Ctrl + and Ctrl -
   useEffect(() => {
