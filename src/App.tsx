@@ -19,6 +19,8 @@ function App() {
     position: { x: number; y: number };
   } | null>(null);
 
+  const [loading, setLoading] = useState(true);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -36,6 +38,13 @@ function App() {
   useEffect(() => {
     loadMindMap();
   }, [loadMindMap]);
+
+  // Show loading spinner until nodes are loaded
+  useEffect(() => {
+    // Simulate loading delay for animation (or check if nodes are loaded)
+    const timer = setTimeout(() => setLoading(false), 500); // 500ms spinner
+    return () => clearTimeout(timer);
+  }, []);
 
   // Handle keyboard shortcuts
   useKeyboardShortcuts(
@@ -125,6 +134,17 @@ function App() {
     window.addEventListener('keydown', handleZoomKeys, { capture: true });
     return () => window.removeEventListener('keydown', handleZoomKeys, true);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-opacity-60 z-50">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-black border-solid mb-4"></div>
+          <span className="text-lg font-semibold text-black">Just a sec...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
