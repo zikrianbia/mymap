@@ -106,7 +106,6 @@ interface MindMapActions {
   navigateToNode: (currentNodeId: string, direction: 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight') => void;
   
   // Node states
-  toggleNodeCollapse: (nodeId: string) => void;
   toggleNodeCompletion: (nodeId: string) => void;
   changeNodeColor: (nodeId: string, color: string) => void;
   
@@ -388,19 +387,6 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
 
   stopEditing: () => {
     set({ editingNodeId: null });
-    get().saveMindMap();
-  },
-
-  toggleNodeCollapse: (nodeId) => {
-    set((state) => ({
-      nodes: {
-        ...state.nodes,
-        [nodeId]: {
-          ...state.nodes[nodeId],
-          isCollapsed: !state.nodes[nodeId].isCollapsed
-        }
-      }
-    }));
     get().saveMindMap();
   },
 

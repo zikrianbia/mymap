@@ -71,18 +71,6 @@ export const useKeyboardShortcuts = (
           }
           break;
 
-        case ' ': // Space
-          e.preventDefault();
-          if (selectedNodeId) {
-            if (e.shiftKey) {
-              // Shift + Space = Collapse all others (TODO: implement)
-            } else {
-              // Space = Toggle collapse
-              toggleNodeCollapse(selectedNodeId);
-            }
-          }
-          break;
-
         case 'e':
         case 'E':
           if (e.shiftKey && selectedNodeId) {

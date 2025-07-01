@@ -27,7 +27,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
     createNode,
     deleteNode,
     toggleNodeCompletion,
-    toggleNodeCollapse,
     isDarkMode,
     changeNodeColor,
   } = useMindMapStore();
@@ -70,13 +69,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
       action: onEdit,
     },
     { divider: true },
-    {
-      icon: node.isCollapsed ? Maximize2 : Minimize2,
-      label: node.isCollapsed ? 'Expand' : 'Collapse',
-      shortcut: 'Space',
-      action: () => toggleNodeCollapse(nodeId),
-      disabled: node.childrenIds.length === 0,
-    },
     {
       icon: Minimize2,
       label: 'Collapse Others',

@@ -50,7 +50,6 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
     startEditing,
     moveNode,
     setCanvasPosition,
-    toggleNodeCollapse,
     reassignParent,
     updateNode,
     stopEditing,
@@ -464,7 +463,7 @@ const MindMapCanvas: React.FC<MindMapCanvasProps> = ({ width, height, onContextM
                       strokeWidth={1}
                       onClick={(e) => {
                         e.cancelBubble = true;
-                        toggleNodeCollapse(node.id);
+                        // Collapse removed: no action
                       }}
                       style={{ cursor: 'pointer' }}
                     />
