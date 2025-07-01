@@ -187,37 +187,6 @@ function App() {
       <div 
         ref={mindmapRef}
         data-mindmap-app
-        tabIndex={0}
-        onKeyDown={(e) => {
-          // Ensure focus stays in mindmap after any key press
-          const { selectedNodeId } = useMindMapStore.getState();
-          if (!selectedNodeId && !document.activeElement?.closest('[data-inline-editor]')) {
-            setTimeout(() => {
-              mindmapRef.current?.focus();
-            }, 0);
-          } else if (selectedNodeId) {
-            // If a node is selected, blur the canvas
-            mindmapRef.current?.blur();
-          }
-        }}
-        onFocus={() => {
-          // Ensure mindmap has focus when clicked
-          const { selectedNodeId } = useMindMapStore.getState();
-          if (!selectedNodeId && !document.activeElement?.closest('[data-inline-editor]')) {
-            mindmapRef.current?.focus();
-          } else if (selectedNodeId) {
-            mindmapRef.current?.blur();
-          }
-        }}
-        onClick={() => {
-          // Ensure mindmap has focus when clicked
-          const { selectedNodeId } = useMindMapStore.getState();
-          if (!selectedNodeId && !document.activeElement?.closest('[data-inline-editor]')) {
-            mindmapRef.current?.focus();
-          } else if (selectedNodeId) {
-            mindmapRef.current?.blur();
-          }
-        }}
         className={`dotted-bg min-h-screen transition-colors ${
           isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
         }`}
