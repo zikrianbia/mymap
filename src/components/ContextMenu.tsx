@@ -187,11 +187,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
                   : 'hover:bg-gray-50 text-gray-700'
               }`}
             >
-              <span className="font-medium">This Node Only</span>
+              <span className="font-medium">Single</span>
               <span className={`text-xs px-2 py-1 rounded ${
                 isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
               }`}>
-                Mod + Shift + C
+                Ctrl + Shift + C
               </span>
             </button>
             <button
@@ -202,7 +202,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
                   : 'hover:bg-gray-50 text-gray-700'
               }`}
             >
-              <span className="font-medium">Including Children</span>
+              <span className="font-medium">Subtree</span>
               <span className={`text-xs px-2 py-1 rounded ${
                 isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
               }`}>
