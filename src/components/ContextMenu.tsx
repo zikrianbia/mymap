@@ -78,21 +78,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
       shortcut: 'Shift + Enter',
       action: onEdit,
     },
-    {
-      icon: Edit,
-      label: 'Add Details',
-      shortcut: 'Shift + E',
-      action: onEdit,
-    },
-    { divider: true },
-    {
-      icon: Minimize2,
-      label: 'Collapse Others',
-      shortcut: 'Shift + Space',
-      action: () => {
-        // TODO: Implement collapse others
-      },
-    },
     { divider: true },
     {
       icon: Palette,
