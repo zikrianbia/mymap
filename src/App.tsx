@@ -3,6 +3,7 @@ import { useMindMapStore } from './stores/mindmapStore';
 import MindMapCanvas from './components/MindMapCanvas';
 import Toolbar from './components/Toolbar';
 import ContextMenu from './components/ContextMenu';
+import ColorPicker from './components/ColorPicker';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 function App() {
@@ -48,7 +49,7 @@ function App() {
   }, []);
 
   // Handle keyboard shortcuts
-  useKeyboardShortcuts(
+  const { showColorPicker, setShowColorPicker } = useKeyboardShortcuts(
     () => {
       if (selectedNodeId) {
         startEditing(selectedNodeId);
@@ -214,6 +215,19 @@ function App() {
               }}
             />
           </div>
+        )}
+
+        {/* Keyboard-triggered Color Picker */}
+        {showColorPicker.show && selectedNodeId && (
+          <ColorPicker
+            nodeId={selectedNodeId}
+            scope={showColorPicker.scope}
+            position={{
+              x: window.innerWidth / 2 - 128,
+              y: window.innerHeight / 2 - 200
+            }}
+            onClose={() => setShowColorPicker({ show: false, scope: 'thisNodeOnly' })}
+          />
         )}
 
         {/* Keyboard shortcuts help */}

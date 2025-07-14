@@ -41,12 +41,15 @@ export interface NodeColors {
 }
 
 export const DEFAULT_COLORS: NodeColors = {
-  black: '#000000',
+  default: '#000000',
   blue: '#3B82F6',
-  emerald: '#10B981',
-  purple: '#8B5CF6',
-  orange: '#F97316',
-  rose: '#F43F5E',
+  green: '#10B981',
   yellow: '#EAB308',
-  gray: '#6B7280',
+  red: '#EF4444',
+  purple: '#8B5CF6',
+  pink: '#EC4899',
+  teal: '#14B8A6',
+  orange: '#F97316',
 };
+
+export type ColorScope = 'thisNodeOnly' | 'includingChildren';

@@ -9,10 +9,12 @@ import {
   Circle,
   Minimize2,
   Maximize2,
-  Palette
+  Palette,
+  ChevronRight
 } from 'lucide-react';
 import { useMindMapStore } from '../stores/mindmapStore';
-import { DEFAULT_COLORS } from '../types/mindmap';
+import { DEFAULT_COLORS, ColorScope } from '../types/mindmap';
+import ColorPicker from './ColorPicker';
 
 interface ContextMenuProps {
   nodeId: string;
@@ -28,10 +30,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
     deleteNode,
     toggleNodeCompletion,
     isDarkMode,
-    changeNodeColor,
   } = useMindMapStore();
 
-  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showColorSubmenu, setShowColorSubmenu] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState<{
+    show: boolean;
+    scope: ColorScope;
+  }>({ show: false, scope: 'thisNodeOnly' });
 
   const node = nodes[nodeId];
   if (!node) return null;
@@ -41,6 +46,10 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
     onClose();
   };
 
+  const handleColorScopeSelect = (scope: ColorScope) => {
+    setShowColorPicker({ show: true, scope });
+    setShowColorSubmenu(false);
+  };
   const menuItems = [
     {
       icon: Plus,
@@ -82,7 +91,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
       icon: Palette,
       label: 'Change Color',
       shortcut: '',
-      action: () => setShowColorPicker((v) => !v),
+      action: () => setShowColorSubmenu((v) => !v),
+      hasSubmenu: true,
     },
     {
       icon: node.isCompleted ? CheckCircle : Circle,
@@ -102,78 +112,131 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
   ];
 
   return (
-    <div
-      className={`fixed z-50 min-w-64 rounded-lg shadow-xl border ${
-        isDarkMode 
-          ? 'bg-gray-800 border-gray-700' 
-          : 'bg-white border-gray-200'
-      }`}
-      style={{ 
-        left: Math.min(position.x, window.innerWidth - 280), 
-        top: Math.min(position.y, window.innerHeight - 400) 
-      }}
-    >
-      <div className="py-2">
-        {menuItems.map((item, index) => {
-          if ('divider' in item) {
-            return (
-              <div 
-                key={index} 
-                className={`my-1 h-px ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`} 
-              />
-            );
-          }
+    <>
+      <div
+        className={`fixed z-50 min-w-64 rounded-lg shadow-xl border ${
+          isDarkMode 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-white border-gray-200'
+        }`}
+        style={{ 
+          left: Math.min(position.x, window.innerWidth - 280), 
+          top: Math.min(position.y, window.innerHeight - 400) 
+        }}
+      >
+        <div className="py-2">
+          {menuItems.map((item, index) => {
+            if ('divider' in item) {
+              return (
+                <div 
+                  key={index} 
+                  className={`my-1 h-px ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`} 
+                />
+              );
+            }
 
-          const Icon = item.icon;
-          return (
+            const Icon = item.icon;
+            return (
+              <button
+                key={index}
+                onClick={() => item.hasSubmenu ? item.action() : handleAction(item.action)}
+                disabled={item.disabled}
+                className={`w-full px-4 py-2.5 text-left flex items-center justify-between transition-colors ${
+                  item.disabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : item.danger
+                      ? 'hover:bg-red-50 hover:text-red-700 text-red-600'
+                      : isDarkMode 
+                        ? 'hover:bg-gray-700 text-gray-200' 
+                        : 'hover:bg-gray-50 text-gray-700'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Icon size={16} />
+                  <span className="font-medium">{item.label}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {item.shortcut && (
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {item.shortcut}
+                    </span>
+                  )}
+                  {item.hasSubmenu && (
+                    <ChevronRight size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-500'} />
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Color scope submenu */}
+      {showColorSubmenu && (
+        <div
+          className={`fixed z-50 w-56 rounded-lg shadow-xl border ${
+            isDarkMode 
+              ? 'bg-gray-800 border-gray-700' 
+              : 'bg-white border-gray-200'
+          }`}
+          style={{ 
+            left: Math.min(position.x + 260, window.innerWidth - 240), 
+            top: Math.min(position.y + 200, window.innerHeight - 200) 
+          }}
+        >
+          <div className="py-2">
             <button
-              key={index}
-              onClick={() => handleAction(item.action)}
-              disabled={item.disabled}
+              onClick={() => handleColorScopeSelect('thisNodeOnly')}
               className={`w-full px-4 py-2.5 text-left flex items-center justify-between transition-colors ${
-                item.disabled
-                  ? 'opacity-50 cursor-not-allowed'
-                  : item.danger
-                    ? 'hover:bg-red-50 hover:text-red-700 text-red-600'
-                    : isDarkMode 
-                      ? 'hover:bg-gray-700 text-gray-200' 
-                      : 'hover:bg-gray-50 text-gray-700'
+                isDarkMode 
+                  ? 'hover:bg-gray-700 text-gray-200' 
+                  : 'hover:bg-gray-50 text-gray-700'
               }`}
             >
-              <div className="flex items-center space-x-3">
-                <Icon size={16} />
-                <span className="font-medium">{item.label}</span>
-              </div>
-              {item.shortcut && (
-                <span className={`text-xs px-2 py-1 rounded ${
-                  isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {item.shortcut}
-                </span>
-              )}
+              <span className="font-medium">This Node Only</span>
+              <span className={`text-xs px-2 py-1 rounded ${
+                isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+              }`}>
+                Mod + Shift + C
+              </span>
             </button>
-          );
-        })}
-        {showColorPicker && (
-          <div className="flex flex-wrap gap-2 px-4 py-2 border-t mt-2">
-            {Object.entries(DEFAULT_COLORS).map(([name, color]) => (
-              <button
-                key={name}
-                onClick={() => {
-                  changeNodeColor(nodeId, color);
-                  setShowColorPicker(false);
-                  onClose();
-                }}
-                style={{ background: color, border: node.color === color ? '2px solid #fff' : '2px solid transparent' }}
-                className="w-7 h-7 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 border-2 transition-all"
-                title={name}
-              />
-            ))}
+            <button
+              onClick={() => handleColorScopeSelect('includingChildren')}
+              className={`w-full px-4 py-2.5 text-left flex items-center justify-between transition-colors ${
+                isDarkMode 
+                  ? 'hover:bg-gray-700 text-gray-200' 
+                  : 'hover:bg-gray-50 text-gray-700'
+              }`}
+            >
+              <span className="font-medium">Including Children</span>
+              <span className={`text-xs px-2 py-1 rounded ${
+                isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
+              }`}>
+                Shift + C
+              </span>
+            </button>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
   );
 };
 
+      {/* Color picker */}
+      {showColorPicker.show && (
+        <ColorPicker
+          nodeId={nodeId}
+          scope={showColorPicker.scope}
+          position={{
+            x: position.x + 320,
+            y: position.y + 200
+          }}
+          onClose={() => {
+            setShowColorPicker({ show: false, scope: 'thisNodeOnly' });
+            onClose();
+          }}
+        />
+      )}
+    </>
 export default ContextMenu;

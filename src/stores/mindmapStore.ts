@@ -108,6 +108,7 @@ interface MindMapActions {
   // Node states
   toggleNodeCompletion: (nodeId: string) => void;
   changeNodeColor: (nodeId: string, color: string) => void;
+  changeNodeColorWithChildren: (nodeId: string, color: string) => void;
   
   // Canvas operations
   setCanvasPosition: (position: Position) => void;
@@ -413,6 +414,31 @@ export const useMindMapStore = create<MindMapState & MindMapActions>((set, get) 
     get().saveMindMap();
   },
 
+  changeNodeColorWithChildren: (nodeId, color) => {
+    set((state) => {
+      const updatedNodes = { ...state.nodes };
+      
+      // Recursively update node and all its descendants
+      const updateNodeAndChildren = (currentNodeId: string) => {
+        if (updatedNodes[currentNodeId]) {
+          updatedNodes[currentNodeId] = {
+            ...updatedNodes[currentNodeId],
+            color
+          };
+          
+          // Update all children recursively
+          updatedNodes[currentNodeId].childrenIds.forEach(childId => {
+            updateNodeAndChildren(childId);
+          });
+        }
+      };
+      
+      updateNodeAndChildren(nodeId);
+      
+      return { nodes: updatedNodes };
+    });
+    get().saveMindMap();
+  },
   rebalanceLayout: () => {
     const state = get();
     console.log('Rebalancing layout...', Object.keys(state.nodes).length, 'nodes');

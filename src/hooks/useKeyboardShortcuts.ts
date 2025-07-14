@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useState } from 'react';
 import { useMindMapStore } from '../stores/mindmapStore';
 
 export const useKeyboardShortcuts = (
@@ -18,7 +19,14 @@ export const useKeyboardShortcuts = (
     nodes,
     navigateToNode,
     rebalanceLayout,
+    changeNodeColor,
+    changeNodeColorWithChildren,
   } = useMindMapStore();
+
+  const [showColorPicker, setShowColorPicker] = useState<{
+    show: boolean;
+    scope: 'thisNodeOnly' | 'includingChildren';
+  }>({ show: false, scope: 'thisNodeOnly' });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -87,6 +95,20 @@ export const useKeyboardShortcuts = (
           }
           break;
 
+        case 'c':
+        case 'C':
+          if (e.shiftKey && selectedNodeId) {
+            e.preventDefault();
+            if (e.ctrlKey || e.metaKey) {
+              // Ctrl + Shift + C: Change color of selected node only
+              setShowColorPicker({ show: true, scope: 'thisNodeOnly' });
+            } else {
+              // Shift + C: Change color of selected node and children
+              setShowColorPicker({ show: true, scope: 'includingChildren' });
+            }
+          }
+          break;
+
         case 'z':
         case 'Z':
           if (e.ctrlKey || e.metaKey) {
@@ -152,5 +174,13 @@ export const useKeyboardShortcuts = (
     onShowContextMenu,
     navigateToNode,
     rebalanceLayout,
+    changeNodeColor,
+    changeNodeColorWithChildren,
   ]);
+
+  // Return the color picker state and setter for use in the parent component
+  return {
+    showColorPicker,
+    setShowColorPicker,
+  };
 };
