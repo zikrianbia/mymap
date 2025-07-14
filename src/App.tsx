@@ -237,7 +237,7 @@ function App() {
           <div className="space-y-1">
             <div>Tab: Add child • Shift+Enter: Edit • Delete: Remove</div>
             <div>Arrow keys: Navigate • Shift+D: Mark done • Space: Collapse</div>
-            <div>Ctrl+Z: Undo • Ctrl+Y: Redo • Right-click: Menu</div>
+            <div>Ctrl+Z: Undo • Ctrl+Y: Redo • Shift+C: Color • Right-click: Menu</div>
           </div>
         </div>
       </div>

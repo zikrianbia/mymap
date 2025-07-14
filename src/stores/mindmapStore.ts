@@ -142,7 +142,7 @@ const createInitialState = (): MindMapState => {
     id: rootId,
     title: 'Main Topic',
     position: { x: 400, y: 300 },
-    color: DEFAULT_COLORS.black,
+    color: DEFAULT_COLORS.default,
     isCompleted: false,
     isCollapsed: false,
     parentId: null,
