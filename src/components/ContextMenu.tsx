@@ -220,8 +220,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
           </div>
         </div>
       )}
-  );
-};
 
       {/* Color picker */}
       {showColorPicker.show && (
@@ -239,4 +237,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
         />
       )}
     </>
+  );
+};
+
 export default ContextMenu;
