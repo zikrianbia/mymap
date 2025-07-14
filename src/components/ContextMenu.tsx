@@ -48,8 +48,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
 
   const handleColorScopeSelect = (scope: ColorScope) => {
     setShowColorPicker({ show: true, scope });
-    setShowColorSubmenu(false);
+    // Keep submenu open until color is selected
   };
+
+  const handleColorPickerClose = () => {
+    setShowColorPicker({ show: false, scope: 'thisNodeOnly' });
+    setShowColorSubmenu(false);
+    onClose();
+  };
+
   const menuItems = [
     {
       icon: Plus,
@@ -230,10 +237,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ nodeId, position, onClose, on
             x: position.x + 320,
             y: position.y + 200
           }}
-          onClose={() => {
-            setShowColorPicker({ show: false, scope: 'thisNodeOnly' });
-            onClose();
-          }}
+          onClose={handleColorPickerClose}
         />
       )}
     </>
